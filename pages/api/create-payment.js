@@ -28,10 +28,10 @@ export default async function handler(req, res) {
         buyer_email,
         buyer_address,
         signature,
-        callback_url: "https://www.cawcode.com/payment-success",
+        callback_url: "https://www.cawcode.com/payment-success"
       },
       {
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" }
       }
     );
 
