@@ -1,53 +1,54 @@
 import express from "express";
-import axios from "axios";
 import crypto from "crypto";
+import axios from "axios";
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const SHOPIER_KEY = process.env.SHOPIER_KEY;
 const SHOPIER_SECRET = process.env.SHOPIER_SECRET;
 
-// Shopify sipariş sonrası yönlendirme endpointi
+app.get("/", (req, res) => {
+  res.send("Cawcode Shopier Bridge Çalışıyor 🚀");
+});
+
+// Shopify siparişten Shopier ödeme oluşturma
 app.post("/create-payment", async (req, res) => {
   try {
-    const { order_id, buyer_name, email, amount, product_name } = req.body;
+    const { order_id, amount, buyer_name, buyer_email, buyer_address } = req.body;
 
-    // Shopier imza
-    const dataToSign = `${SHOPIER_KEY}${order_id}${amount}${buyer_name}`;
+    // Shopier imzalama
     const signature = crypto
       .createHmac("sha256", SHOPIER_SECRET)
-      .update(dataToSign)
+      .update(`${SHOPIER_KEY}${order_id}${amount}`)
       .digest("hex");
 
-    // Shopier ödeme başlatma
-    const response = await axios.post("https://www.shopier.com/api/v1/init", {
-      API_key: SHOPIER_KEY,
-      order_id,
-      amount,
-      buyer_name,
-      email,
-      product_name,
-      signature,
-      callback_success_url: "https://seninsiten.com/success",
-      callback_fail_url: "https://seninsiten.com/fail",
-    });
+    // Shopier API çağrısı
+    const response = await axios.post(
+      "https://www.shopier.com/api/v1/init",
+      {
+        API_key: SHOPIER_KEY,
+        signature: signature,
+        order_id: order_id,
+        amount: amount,
+        buyer_name: buyer_name,
+        buyer_email: buyer_email,
+        buyer_address: buyer_address,
+        success_url: "https://www.cawcode.com/thank-you", // ödeme başarılı olursa
+        fail_url: "https://www.cawcode.com/payment-failed" // ödeme başarısız olursa
+      },
+      { headers: { "Content-Type": "application/json" } }
+    );
 
+    // Shopier ödeme linkine yönlendirme
     const payment_url = response.data.payment_url;
-
-    // 🔥 Müşteri direkt ödeme sayfasına yönlendirilsin
     return res.redirect(payment_url);
 
-  } catch (err) {
-    console.error("Payment error:", err.response?.data || err.message);
-    return res.status(500).send("Ödeme başlatılamadı.");
+  } catch (error) {
+    console.error("Shopier hata:", error.message);
+    res.status(500).send("Ödeme başlatılamadı!");
   }
 });
 
-// Test için basit endpoint
-app.get("/", (req, res) => {
-  res.send("Cawcode - Shopier Bridge Çalışıyor 🚀");
-});
-
-// Sunucu
-app.listen(3000, () => console.log("Bridge up on port 3000 🚀"));
+app.listen(3000, () => console.log("Bridge up on 3000 🚀"));
