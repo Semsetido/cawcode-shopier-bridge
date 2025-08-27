@@ -28,20 +28,19 @@ export default async function handler(req, res) {
         buyer_email,
         buyer_address,
         signature,
-        callback_url: "https://www.cawcode.com/payment-success"
+        callback_url: "https://www.cawcode.com/payment-success",
       },
       {
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
 
     if (response.data && response.data.payment_url) {
       return res.redirect(response.data.payment_url);
     } else {
-      return res.status(500).json({ error: "Shopier geçersiz yanıt döndü" });
+      return res.status(500).json({ error: "Shopier yanıtında payment_url yok" });
     }
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Payment route hata verdi" });
+    return res.status(500).json({ error: err.message });
   }
 }
